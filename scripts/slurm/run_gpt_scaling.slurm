@@ -15,13 +15,20 @@
 
 set -euo pipefail
 
+# Della paths
+CONDA_BASE="/home/cw5411/miniconda3"
+ENV_NAME="LLM_and_AM"
+REPO_DIR="/home/cw5411/statmech_scalinglaw"
+
+mkdir -p "${REPO_DIR}/logs" "${REPO_DIR}/experiments"
+
+module purge
 module load cudatoolkit/12.8
 
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate LLM_and_AM
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda activate "${ENV_NAME}"
 
-cd /Users/wangcheng/Desktop/statmech_scalinglaw
-mkdir -p logs experiments
+cd "${REPO_DIR}"
 
 # Sweep dataset size via array task ID.
 DATASET_SIZES=(262144 524288 1048576 2097152 4194304)
