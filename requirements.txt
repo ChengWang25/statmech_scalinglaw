@@ -1,0 +1,6 @@
+numpy>=1.25
+scipy>=1.11
+matplotlib>=3.8
+pandas>=2.1
+torch>=2.1
+datasets>=2.15
