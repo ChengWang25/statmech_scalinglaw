@@ -18,7 +18,7 @@ CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
 REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
 CONFIG_PATH="configs/experiment_v002.json"
-OUTPUT_ROOT="experiments/pc_hmm_scaling/v001/datasets_grid"
+OUTPUT_ROOT="experiments/pc_hmm_scaling/v002/datasets_grid"
 
 # Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
 DATASET_SIZES=(262144 524288 1048576 2097152)
