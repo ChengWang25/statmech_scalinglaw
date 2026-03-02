@@ -16,7 +16,7 @@ set -euo pipefail
 # ===== User-configurable paths =====
 CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
-REPO_DIR="/home/cw5411/statmech_scalinglaw"
+REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
 CONFIG_PATH="configs/experiment_v001.json"
 OUTPUT_ROOT="experiments/pc_hmm_scaling/v001/datasets_grid"
 
