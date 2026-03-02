@@ -136,7 +136,11 @@ def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
         )
         hmm = PseudoCriticalHMM(cfg)
 
-    tokens = hmm.sample_tokens(args.total_tokens, seed=args.seed)
+    total_draw = args.total_tokens + args.burn_in
+    if total_draw <= 0:
+        raise ValueError("total_tokens + burn_in must be > 0")
+    raw_tokens = hmm.sample_tokens(total_draw, seed=args.seed)
+    tokens = raw_tokens[args.burn_in :]
 
     n = len(tokens)
     n_train = int(args.train_frac * n)
@@ -176,6 +180,8 @@ def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
 
     metadata = {
         "seed": args.seed,
+        "burn_in": int(args.burn_in),
+        "num_tokens_drawn": int(total_draw),
         "num_tokens": int(n),
         "splits": {
             "train": int(n_train),
@@ -229,6 +235,7 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--emission-concentration", type=float, default=50.0)
 
     p.add_argument("--total-tokens", type=int, default=2**20)
+    p.add_argument("--burn-in", type=int, default=0)
     p.add_argument("--train-frac", type=float, default=0.9)
     p.add_argument("--val-frac", type=float, default=0.05)
 
@@ -248,6 +255,8 @@ def main() -> None:
     _cfg, cfg_path = inject_config_defaults(parser, sys.argv[1:], section="dataset")
     args = parser.parse_args()
     args._config_path = cfg_path
+    if args.burn_in < 0:
+        raise ValueError("burn_in must be >= 0")
     if args.train_frac + args.val_frac >= 1.0:
         raise ValueError("train_frac + val_frac must be < 1")
     metadata = export_dataset(args)

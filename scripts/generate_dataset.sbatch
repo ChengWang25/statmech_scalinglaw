@@ -22,9 +22,7 @@ OUTPUT_ROOT="experiments/pc_hmm_scaling/v001/datasets_grid"
 
 # Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
 DATASET_SIZES=(262144 524288 1048576 2097152)
-SEQ_LEN=8192
-# Burn-in before recording generated data (default: SEQ_LEN).
-BURN_IN=${SEQ_LEN}
+SEQ_LEN=4096
 SEED=0
 
 mkdir -p "${REPO_DIR}/logs"
@@ -53,7 +51,6 @@ CMD=(
   --config "${CONFIG_PATH}"
   --out-dir "${OUT_DIR}"
   --total-tokens "${TOTAL_TOKENS}"
-  --burn-in "${BURN_IN}"
   --dataset-name "${RUN_NAME}"
   --seed "${SEED}"
 )
@@ -73,7 +70,6 @@ seq_len = int(${SEQ_LEN})
 
 summary = {
     "sequence_length": seq_len,
-    "burn_in": int(${BURN_IN}),
     "splits": {},
 }
 
