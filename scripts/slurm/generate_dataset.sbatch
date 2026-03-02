@@ -17,8 +17,8 @@ set -euo pipefail
 CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
 REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
-CONFIG_PATH="configs/experiment_v004.json"
-OUTPUT_ROOT="experiments/pc_hmm_scaling/v004/datasets_grid"
+CONFIG_PATH="configs/experiment_v007.json"
+OUTPUT_ROOT="experiments/pc_hmm_scaling/v007/datasets_grid"
 
 # Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
 DATASET_SIZES=(262144 524288 1048576 2097152)
