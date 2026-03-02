@@ -1,7 +1,7 @@
 {
   "output_root": "experiments",
   "experiment_name": "pc_hmm_scaling",
-  "version": "v002",
+  "version": "v003",
   "dataset": {
     "dataset_name": "dataset_main",
     "num_hidden": 512,
@@ -9,7 +9,7 @@
     "epsilon_min": 1e-4,
     "epsilon_max": 1e-1,
     "epsilon_schedule": "logspace",
-    "q_type": "random",
+    "q_type": "uniform",
     "num_clusters": 16,
     "emission_type": "peaked",
     "eta": 0.15,
