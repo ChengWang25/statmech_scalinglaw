@@ -1,0 +1,58 @@
+{
+  "output_root": "experiments",
+  "experiment_name": "pc_hmm_scaling",
+  "version": "v001",
+  "dataset": {
+    "dataset_name": "dataset_main",
+    "num_hidden": 512,
+    "vocab_size": 256,
+    "epsilon_min": 1e-4,
+    "epsilon_max": 1e-1,
+    "epsilon_schedule": "logspace",
+    "q_type": "uniform",
+    "num_clusters": 16,
+    "emission_type": "peaked",
+    "eta": 0.15,
+    "total_tokens": 1048576,
+    "train_frac": 0.9,
+    "val_frac": 0.05,
+    "max_lag": 8192,
+    "max_context": 8,
+    "seed": 0
+  },
+  "train": {
+    "run_name": "gpt_small_main",
+    "model_preset": "small",
+    "block_size": 512,
+    "batch_size": 16,
+    "max_iters": 2000,
+    "eval_interval": 200,
+    "eval_iters": 40,
+    "learning_rate": 3e-4,
+    "min_lr": 3e-5,
+    "warmup_iters": 200,
+    "lr_decay_iters": 2000,
+    "weight_decay": 0.1,
+    "grad_clip": 1.0,
+    "seed": 0
+  },
+  "sweep": {
+    "num_hidden_grid": "512",
+    "epsilon_min_grid": "1e-4",
+    "epsilon_max_grid": "1e-1",
+    "epsilon_schedule_grid": "logspace",
+    "eta_grid": "0.15",
+    "vocab_size_grid": "256",
+    "dataset_sizes": "262144,524288,1048576",
+    "model_sizes": "small,medium,large",
+    "total_tokens": 3000000,
+    "block_size": 512,
+    "max_iters": 1200,
+    "eval_interval": 200,
+    "eval_iters": 40,
+    "seed": 0
+  },
+  "analysis": {
+    "min_points": 3
+  }
+}
