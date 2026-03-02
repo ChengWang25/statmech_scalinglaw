@@ -20,12 +20,17 @@ Using many hidden states and a dense spread of `epsilon_i` (e.g. log-spaced betw
 .
 ├── README.md
 ├── requirements.txt
+├── experiment_utils.py
+├── configs/
+│   └── experiment_v001.json
 ├── hmm_generator.py
 ├── stats.py
 ├── export_dataset.py
 ├── train_gpt2.py
 ├── sweep.py
-└── analyze_scaling.py
+├── analyze_scaling.py
+└── scripts/
+    └── run_gpt_scaling.sbatch
 ```
 
 ## Setup
@@ -74,6 +79,32 @@ pip install -r requirements.txt
   - reports parameter CI (curve-fit covariance approximation)
   - plots loss curves and `alpha` correlations vs MI/entropy slopes
 
+- `experiment_utils.py`
+  - shared config loader and output path resolver
+  - supports versioned directories: `experiments/<experiment_name>/<version>/<stage>/...`
+
+## Config-Driven Workflow
+
+All main entrypoints now support `--config`:
+- `export_dataset.py` uses config section `dataset`
+- `train_gpt2.py` uses config section `train`
+- `sweep.py` uses config section `sweep`
+- `analyze_scaling.py` uses config section `analysis`
+
+Example config is provided in `configs/experiment_v001.json`.
+
+With config mode, output is versioned by default:
+
+```text
+experiments/
+└── <experiment_name>/
+    └── <version>/
+        ├── datasets/
+        ├── train/
+        ├── sweep/
+        └── analysis/
+```
+
 ## Suggested Defaults
 
 HMM defaults:
@@ -111,15 +142,7 @@ python hmm_generator.py \
 ### 2) Generate dataset + diagnostics
 
 ```bash
-python export_dataset.py \
-  --out-dir experiments/demo_dataset \
-  --hmm-path artifacts/hmm_model.npz \
-  --total-tokens 262144 \
-  --train-frac 0.9 \
-  --val-frac 0.05 \
-  --max-lag 64 \
-  --max-context 6 \
-  --seed 0
+python export_dataset.py --config configs/experiment_v001.json
 ```
 
 ### 3) Measure MI and conditional entropy directly
@@ -137,44 +160,18 @@ python stats.py \
 
 ```bash
 python train_gpt2.py \
-  --train-tokens experiments/demo_dataset/train.npy \
-  --val-tokens experiments/demo_dataset/val.npy \
-  --out-dir experiments/demo_train_small \
-  --model-preset small \
-  --block-size 256 \
-  --batch-size 16 \
-  --max-iters 1000 \
-  --eval-interval 100 \
-  --eval-iters 20 \
-  --learning-rate 3e-4 \
-  --warmup-iters 100 \
-  --lr-decay-iters 1000 \
-  --amp
+  --config configs/experiment_v001.json \
+  --train-tokens experiments/pc_hmm_scaling/v001/datasets/dataset_main/train.npy \
+  --val-tokens experiments/pc_hmm_scaling/v001/datasets/dataset_main/val.npy
 ```
 
 ### 5) Run a compact scaling sweep and fit scaling law
 
 ```bash
-python sweep.py \
-  --out-root experiments/demo_sweep \
-  --num-hidden-grid 512 \
-  --epsilon-min-grid 1e-4 \
-  --epsilon-max-grid 1e-1 \
-  --epsilon-schedule-grid logspace \
-  --eta-grid 0.15 \
-  --vocab-size-grid 256 \
-  --dataset-sizes 65536,131072,262144 \
-  --model-sizes small \
-  --total-tokens 300000 \
-  --block-size 256 \
-  --max-iters 600 \
-  --eval-interval 100 \
-  --eval-iters 20
+python sweep.py --config configs/experiment_v001.json
 
 python analyze_scaling.py \
-  --experiment-root experiments/demo_sweep \
-  --out-dir experiments/demo_analysis \
-  --min-points 3
+  --config configs/experiment_v001.json
 ```
 
 ## Notes

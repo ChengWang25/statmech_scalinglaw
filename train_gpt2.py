@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -14,6 +15,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from experiment_utils import (
+    inject_config_defaults,
+    resolve_output_dir,
+    to_jsonable,
+    write_config_snapshot,
+)
 
 
 @dataclass
@@ -222,7 +230,14 @@ def get_lr(it: int, cfg: argparse.Namespace) -> float:
 
 
 def run_training(args: argparse.Namespace) -> dict[str, Any]:
-    out_dir = Path(args.out_dir)
+    out_dir = resolve_output_dir(
+        explicit_out_dir=args.out_dir,
+        output_root=args.output_root,
+        experiment_name=args.experiment_name,
+        version=args.version,
+        stage="train",
+        run_name=args.run_name,
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     train_tokens = np.load(args.train_tokens)
@@ -361,19 +376,25 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         "model_config": asdict(gpt_cfg),
         "num_train_tokens": int(len(train_tokens)),
         "num_val_tokens": int(len(val_tokens)),
-        "args": vars(args),
+        "args": to_jsonable(args),
     }
     with (out_dir / "result.json").open("w", encoding="utf-8") as f:
         json.dump(final, f, indent=2)
+    write_config_snapshot(out_dir, args, getattr(args, "_config_path", None))
 
     return final
 
 
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Train GPT-2-like model from scratch")
+    p.add_argument("--config", type=Path, default=None)
+    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
+    p.add_argument("--version", type=str, default="v001")
+    p.add_argument("--run-name", type=str, default="gpt_train_main")
     p.add_argument("--train-tokens", type=Path, required=True)
     p.add_argument("--val-tokens", type=Path, required=True)
-    p.add_argument("--out-dir", type=Path, required=True)
+    p.add_argument("--out-dir", type=Path, default=None)
 
     p.add_argument("--model-preset", type=str, default="small", choices=["small", "medium", "large"])
     p.add_argument("--n-layer", type=int, default=6)
@@ -410,7 +431,10 @@ def build_argparser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_argparser().parse_args()
+    parser = build_argparser()
+    _cfg, cfg_path = inject_config_defaults(parser, sys.argv[1:], section="train")
+    args = parser.parse_args()
+    args._config_path = cfg_path
     result = run_training(args)
     print(json.dumps(result, indent=2))
 

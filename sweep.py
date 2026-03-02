@@ -6,10 +6,16 @@ import argparse
 import hashlib
 import itertools
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from experiment_utils import (
+    inject_config_defaults,
+    resolve_output_dir,
+    write_config_snapshot,
+)
 from export_dataset import export_dataset
 from train_gpt2 import run_training
 
@@ -35,8 +41,16 @@ def _json_dump(path: Path, obj: dict[str, Any]) -> None:
 
 
 def run_sweep(args: argparse.Namespace) -> dict[str, Any]:
-    out_root = Path(args.out_root)
+    out_root = resolve_output_dir(
+        explicit_out_dir=args.out_root,
+        output_root=args.output_root,
+        experiment_name=args.experiment_name,
+        version=args.version,
+        stage="sweep",
+        run_name=None,
+    )
     out_root.mkdir(parents=True, exist_ok=True)
+    write_config_snapshot(out_root, args, getattr(args, "_config_path", None))
 
     num_hidden_grid = _parse_int_list(args.num_hidden_grid)
     eps_min_grid = _parse_float_list(args.epsilon_min_grid)
@@ -221,7 +235,11 @@ def run_sweep(args: argparse.Namespace) -> dict[str, Any]:
 
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Run resumable scaling sweeps")
-    p.add_argument("--out-root", type=Path, default=Path("experiments/sweep"))
+    p.add_argument("--config", type=Path, default=None)
+    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
+    p.add_argument("--version", type=str, default="v001")
+    p.add_argument("--out-root", type=Path, default=None)
 
     p.add_argument("--num-hidden-grid", type=str, default="512")
     p.add_argument("--epsilon-min-grid", type=str, default="1e-4")
@@ -274,7 +292,10 @@ def build_argparser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_argparser().parse_args()
+    parser = build_argparser()
+    _cfg, cfg_path = inject_config_defaults(parser, sys.argv[1:], section="sweep")
+    args = parser.parse_args()
+    args._config_path = cfg_path
     summary = run_sweep(args)
     print(json.dumps(summary, indent=2))
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,11 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
+from experiment_utils import (
+    inject_config_defaults,
+    resolve_output_dir,
+    write_config_snapshot,
+)
 
 def scaling_fn(N: np.ndarray, L_inf: float, A: float, alpha: float) -> np.ndarray:
     return L_inf + A * np.power(N, -alpha)
@@ -207,15 +213,39 @@ def analyze(experiment_root: Path, out_dir: Path, min_points: int) -> dict[str, 
 
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Analyze scaling curves from sweep output")
-    p.add_argument("--experiment-root", type=Path, required=True)
-    p.add_argument("--out-dir", type=Path, default=Path("experiments/analysis"))
+    p.add_argument("--config", type=Path, default=None)
+    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
+    p.add_argument("--version", type=str, default="v001")
+    p.add_argument("--experiment-root", type=Path, default=None)
+    p.add_argument("--out-dir", type=Path, default=None)
     p.add_argument("--min-points", type=int, default=3)
     return p
 
 
 def main() -> None:
-    args = build_argparser().parse_args()
-    out = analyze(args.experiment_root, args.out_dir, args.min_points)
+    parser = build_argparser()
+    _cfg, cfg_path = inject_config_defaults(parser, sys.argv[1:], section="analysis")
+    args = parser.parse_args()
+
+    experiment_root = args.experiment_root or resolve_output_dir(
+        explicit_out_dir=None,
+        output_root=args.output_root,
+        experiment_name=args.experiment_name,
+        version=args.version,
+        stage="sweep",
+        run_name=None,
+    )
+    out_dir = resolve_output_dir(
+        explicit_out_dir=args.out_dir,
+        output_root=args.output_root,
+        experiment_name=args.experiment_name,
+        version=args.version,
+        stage="analysis",
+        run_name=None,
+    )
+    out = analyze(experiment_root, out_dir, args.min_points)
+    write_config_snapshot(out_dir, args, cfg_path)
     print(json.dumps(out, indent=2))
 
 

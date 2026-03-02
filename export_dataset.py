@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from experiment_utils import (
+    inject_config_defaults,
+    resolve_output_dir,
+    write_config_snapshot,
+)
 from hmm_generator import HMMConfig, PseudoCriticalHMM
 from stats import (
     estimate_conditional_entropy,
@@ -100,7 +106,14 @@ def compute_diagnostics(
 
 
 def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
-    out_dir = Path(args.out_dir)
+    out_dir = resolve_output_dir(
+        explicit_out_dir=args.out_dir,
+        output_root=args.output_root,
+        experiment_name=args.experiment_name,
+        version=args.version,
+        stage="datasets",
+        run_name=args.dataset_name,
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.hmm_path is not None:
@@ -187,13 +200,19 @@ def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
 
     with (out_dir / "metadata.json").open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
+    write_config_snapshot(out_dir, args, getattr(args, "_config_path", None))
 
     return metadata
 
 
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Export synthetic HMM token dataset")
-    p.add_argument("--out-dir", type=Path, required=True)
+    p.add_argument("--config", type=Path, default=None)
+    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
+    p.add_argument("--version", type=str, default="v001")
+    p.add_argument("--dataset-name", type=str, default="dataset_main")
+    p.add_argument("--out-dir", type=Path, default=None)
     p.add_argument("--hmm-path", type=Path, default=None)
 
     p.add_argument("--num-hidden", type=int, default=512)
@@ -225,7 +244,10 @@ def build_argparser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_argparser().parse_args()
+    parser = build_argparser()
+    _cfg, cfg_path = inject_config_defaults(parser, sys.argv[1:], section="dataset")
+    args = parser.parse_args()
+    args._config_path = cfg_path
     if args.train_frac + args.val_frac >= 1.0:
         raise ValueError("train_frac + val_frac must be < 1")
     metadata = export_dataset(args)
