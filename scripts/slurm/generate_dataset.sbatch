@@ -6,7 +6,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
 #SBATCH --account=sarangg
-#SBATCH --array=0-3
+#SBATCH --array=0-0
 #SBATCH --output=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.out
 #SBATCH --error=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -18,13 +18,13 @@ set -euo pipefail
 CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
 REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
-CONFIG_PATH="${CONFIG_PATH:-configs/experiment_v007.json}"
+CONFIG_PATH="${CONFIG_PATH:-configs/experiment_v013.json}"
 # Optional manual override; leave empty to use config-driven path.
 OUTPUT_ROOT_OVERRIDE="${OUTPUT_ROOT_OVERRIDE:-}"
 SCRATCH_ROOT="/scratch/gpfs/SARANGG/cw5411"
 
-# Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
-DATASET_SIZES=(262144 524288 1048576 2097152)
+# Single-run setting: only the largest dataset size.
+DATASET_SIZES=(4194304)
 SEQ_LEN="${SEQ_LEN:-8192}"
 # Burn-in before recording generated data (default: SEQ_LEN).
 BURN_IN=${SEQ_LEN}
@@ -56,6 +56,13 @@ import json
 from pathlib import Path
 cfg = json.loads(Path("${CONFIG_PATH}").read_text())
 print(cfg.get("version", "v001"))
+PY
+)
+CFG_MAX_LAG=$(python - <<PY
+import json
+from pathlib import Path
+cfg = json.loads(Path("${CONFIG_PATH}").read_text())
+print(int(cfg.get("dataset", {}).get("max_lag", 8192)))
 PY
 )
 
@@ -132,11 +139,8 @@ with (out_dir / "sequence_view_metadata.json").open("w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2)
 PY
 
-# Stats: probe up to min(SEQ_LEN, 16384).
-MAX_LAG=${SEQ_LEN}
-if [[ ${MAX_LAG} -gt 16384 ]]; then
-  MAX_LAG=16384
-fi
+# Stats: use config max_lag (extended window experiments).
+MAX_LAG=${CFG_MAX_LAG}
 VOCAB_SIZE=$(python - <<PY
 import json
 from pathlib import Path
