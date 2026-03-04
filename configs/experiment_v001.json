@@ -1,5 +1,5 @@
 {
-  "output_root": "experiments",
+  "output_root": "/scratch/gpfs/SARANGG/cw5411",
   "experiment_name": "pc_hmm_scaling",
   "version": "v001",
   "dataset": {

@@ -214,7 +214,7 @@ def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Export synthetic HMM token dataset")
     p.add_argument("--config", type=Path, default=None)
-    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--output-root", type=Path, default=Path("/scratch/gpfs/SARANGG/cw5411"))
     p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
     p.add_argument("--version", type=str, default="v001")
     p.add_argument("--dataset-name", type=str, default="dataset_main")

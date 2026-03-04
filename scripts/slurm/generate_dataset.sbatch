@@ -6,8 +6,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
 #SBATCH --array=0-3
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.out
+#SBATCH --error=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=cw5411@princeton.edu
 
@@ -18,7 +18,9 @@ CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
 REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
 CONFIG_PATH="configs/experiment_v007.json"
-OUTPUT_ROOT="experiments/pc_hmm_scaling/v007/datasets_grid"
+# Optional manual override; leave empty to use config-driven path.
+OUTPUT_ROOT_OVERRIDE=""
+SCRATCH_ROOT="/scratch/gpfs/SARANGG/cw5411"
 
 # Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
 DATASET_SIZES=(262144 524288 1048576 2097152)
@@ -27,11 +29,44 @@ SEQ_LEN=8192
 BURN_IN=${SEQ_LEN}
 SEED=0
 
-mkdir -p "${REPO_DIR}/logs"
+mkdir -p "${SCRATCH_ROOT}/logs"
 cd "${REPO_DIR}"
 
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
 conda activate "${ENV_NAME}"
+
+# Resolve output root from config to avoid hardcoded version paths.
+CFG_OUTPUT_ROOT=$(python - <<PY
+import json
+from pathlib import Path
+cfg = json.loads(Path("${CONFIG_PATH}").read_text())
+print(cfg.get("output_root", "experiments"))
+PY
+)
+CFG_EXPERIMENT_NAME=$(python - <<PY
+import json
+from pathlib import Path
+cfg = json.loads(Path("${CONFIG_PATH}").read_text())
+print(cfg.get("experiment_name", "pc_hmm_scaling"))
+PY
+)
+CFG_VERSION=$(python - <<PY
+import json
+from pathlib import Path
+cfg = json.loads(Path("${CONFIG_PATH}").read_text())
+print(cfg.get("version", "v001"))
+PY
+)
+
+if [[ -n "${OUTPUT_ROOT_OVERRIDE}" ]]; then
+  OUTPUT_ROOT="${OUTPUT_ROOT_OVERRIDE}"
+else
+  OUTPUT_ROOT="${CFG_OUTPUT_ROOT}/${CFG_EXPERIMENT_NAME}/${CFG_VERSION}/datasets_grid"
+fi
+
+# Add job id namespace to prevent collisions across concurrent submissions.
+JOB_TAG=${SLURM_JOB_ID:-manual}
+OUTPUT_ROOT="${OUTPUT_ROOT}/job_${JOB_TAG}"
 
 TASK_ID=${SLURM_ARRAY_TASK_ID:-0}
 NUM_SIZES=${#DATASET_SIZES[@]}

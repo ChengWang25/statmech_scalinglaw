@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.out
+#SBATCH --error=/scratch/gpfs/SARANGG/cw5411/logs/%x_%j.err
 #SBATCH --constraint=gpu40
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=cw5411@princeton.edu
@@ -16,10 +16,11 @@ set -euo pipefail
 
 CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
-REPO_DIR="/home/cw5411/statmech_scalinglaw"
+REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
 CONFIG_PATH="configs/experiment_v001.json"
+SCRATCH_ROOT="/scratch/gpfs/SARANGG/cw5411"
 
-mkdir -p "${REPO_DIR}/logs"
+mkdir -p "${SCRATCH_ROOT}/logs"
 
 module purge
 module load cudatoolkit/12.8

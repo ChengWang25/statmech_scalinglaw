@@ -214,7 +214,7 @@ def analyze(experiment_root: Path, out_dir: Path, min_points: int) -> dict[str, 
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Analyze scaling curves from sweep output")
     p.add_argument("--config", type=Path, default=None)
-    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--output-root", type=Path, default=Path("/scratch/gpfs/SARANGG/cw5411"))
     p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
     p.add_argument("--version", type=str, default="v001")
     p.add_argument("--experiment-root", type=Path, default=None)

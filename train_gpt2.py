@@ -388,7 +388,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Train GPT-2-like model from scratch")
     p.add_argument("--config", type=Path, default=None)
-    p.add_argument("--output-root", type=Path, default=Path("experiments"))
+    p.add_argument("--output-root", type=Path, default=Path("/scratch/gpfs/SARANGG/cw5411"))
     p.add_argument("--experiment-name", type=str, default="pc_hmm_scaling")
     p.add_argument("--version", type=str, default="v001")
     p.add_argument("--run-name", type=str, default="gpt_train_main")
