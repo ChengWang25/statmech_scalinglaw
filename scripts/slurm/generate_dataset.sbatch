@@ -17,17 +17,17 @@ set -euo pipefail
 CONDA_BASE="/home/cw5411/miniconda3"
 ENV_NAME="LLM_env"
 REPO_DIR="/home/cw5411/projects/statmech_scalinglaw"
-CONFIG_PATH="configs/experiment_v007.json"
+CONFIG_PATH="${CONFIG_PATH:-configs/experiment_v007.json}"
 # Optional manual override; leave empty to use config-driven path.
-OUTPUT_ROOT_OVERRIDE=""
+OUTPUT_ROOT_OVERRIDE="${OUTPUT_ROOT_OVERRIDE:-}"
 SCRATCH_ROOT="/scratch/gpfs/SARANGG/cw5411"
 
 # Grid: sweep only total token budget N. Keep #SBATCH --array in sync.
 DATASET_SIZES=(262144 524288 1048576 2097152)
-SEQ_LEN=8192
+SEQ_LEN="${SEQ_LEN:-8192}"
 # Burn-in before recording generated data (default: SEQ_LEN).
 BURN_IN=${SEQ_LEN}
-SEED=0
+SEED="${SEED:-0}"
 
 mkdir -p "${SCRATCH_ROOT}/logs"
 cd "${REPO_DIR}"
