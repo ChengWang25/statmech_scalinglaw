@@ -127,6 +127,9 @@ def export_dataset(args: argparse.Namespace) -> dict[str, Any]:
             epsilon_schedule=args.epsilon_schedule,
             powerlaw_exponent=args.powerlaw_exponent,
             q_type=args.q_type,
+            transition_mode=args.transition_mode,
+            rotation_angle=args.rotation_angle,
+            spectral_retries=args.spectral_retries,
             num_clusters=args.num_clusters,
             cluster_stickiness=args.cluster_stickiness,
             emission_type=args.emission_type,
@@ -228,6 +231,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--epsilon-schedule", type=str, default="logspace")
     p.add_argument("--powerlaw-exponent", type=float, default=1.25)
     p.add_argument("--q-type", type=str, default="uniform")
+    p.add_argument("--transition-mode", type=str, default="metastable")
+    p.add_argument("--rotation-angle", type=float, default=0.02)
+    p.add_argument("--spectral-retries", type=int, default=10)
     p.add_argument("--num-clusters", type=int, default=16)
     p.add_argument("--cluster-stickiness", type=float, default=0.92)
     p.add_argument("--emission-type", type=str, default="peaked")

@@ -14,7 +14,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.linalg import eig
+from scipy.linalg import eig, expm
 
 
 @dataclass
@@ -27,6 +27,9 @@ class HMMConfig:
     powerlaw_exponent: float = 1.25
     epsilon_custom: list[float] | None = None
     q_type: str = "uniform"  # uniform | cluster | random
+    transition_mode: str = "metastable"  # metastable | spectral
+    rotation_angle: float = 0.02
+    spectral_retries: int = 10
     num_clusters: int = 16
     cluster_stickiness: float = 0.92
     emission_type: str = "peaked"  # onehot | peaked | dirichlet_cluster
@@ -48,8 +51,15 @@ class PseudoCriticalHMM:
 
         rng = np.random.default_rng(config.seed)
         self.epsilon = self._build_epsilon(config)
-        self.Q = self._build_mixing_matrix(config, rng)
-        self.P = self._build_transition(self.epsilon, self.Q)
+        if config.transition_mode == "metastable":
+            self.Q = self._build_mixing_matrix(config, rng)
+            self.P = self._build_transition(self.epsilon, self.Q)
+        elif config.transition_mode == "spectral":
+            # Q is not used in spectral mode; keep a valid placeholder for serialization.
+            self.Q = np.zeros((self.num_hidden, self.num_hidden), dtype=self.dtype)
+            self.P = self._build_transition_spectral(config, rng)
+        else:
+            raise ValueError(f"Unknown transition_mode={config.transition_mode}")
         self.O = self._build_emission(config, rng)
 
         self._validate()
@@ -137,10 +147,64 @@ class PseudoCriticalHMM:
     def _build_transition(
         self, epsilon: NDArray[np.float64], Q: NDArray[np.float64]
     ) -> NDArray[np.float64]:
-        n = self.num_hidden
         P = epsilon[:, None] * Q
         np.fill_diagonal(P, 1.0 - epsilon)
         return P.astype(self.dtype)
+
+    def _build_transition_spectral(
+        self, cfg: HMMConfig, rng: np.random.Generator
+    ) -> NDArray[np.float64]:
+        """Construct P from exact eigenvalues with a controllable random rotation.
+
+        We enforce a uniform stationary vector and only rotate inside the subspace
+        orthogonal to the all-ones vector, so the leading eigenpair remains
+        (lambda=1, v=1). We then adaptively shrink rotation_angle until the
+        resulting matrix is elementwise nonnegative.
+        """
+        n = cfg.num_hidden
+        if n > 1024:
+            raise ValueError(
+                "spectral transition_mode is O(n^3) and disabled for num_hidden > 1024"
+            )
+
+        lambdas = np.empty(n, dtype=np.float64)
+        lambdas[0] = 1.0
+        # Keep non-leading eigenvalues in [0, 1) based on epsilon schedule.
+        non_lead = np.clip(1.0 - np.asarray(self.epsilon, dtype=np.float64), 0.0, 1.0 - 1e-12)
+        non_lead = np.sort(non_lead)[::-1]
+        lambdas[1:] = non_lead[: n - 1]
+
+        # u1 is the normalized all-ones vector (uniform stationary distribution).
+        u1 = np.ones((n, 1), dtype=np.float64) / np.sqrt(n)
+
+        # Build an orthonormal complement basis U_perp via QR.
+        M = rng.normal(size=(n, n - 1))
+        M = M - u1 @ (u1.T @ M)
+        U_perp, _ = np.linalg.qr(M, mode="reduced")
+
+        theta = float(max(0.0, cfg.rotation_angle))
+        retries = int(max(0, cfg.spectral_retries))
+
+        for _ in range(retries + 1):
+            if n > 1:
+                A = rng.normal(size=(n - 1, n - 1))
+                A = A - A.T
+                R = expm(theta * A)
+                W = np.concatenate([u1, U_perp @ R], axis=1)
+            else:
+                W = u1
+
+            P = (W * lambdas[None, :]) @ W.T
+            min_entry = float(P.min())
+            row_err = float(np.max(np.abs(P.sum(axis=1) - 1.0)))
+            if min_entry >= -1e-12 and row_err <= 1e-8:
+                return P.astype(self.dtype)
+            theta *= 0.5
+
+        raise ValueError(
+            "Failed to construct nonnegative spectral transition matrix; "
+            "decrease rotation_angle or use transition_mode='metastable'."
+        )
 
     def _build_emission(
         self, cfg: HMMConfig, rng: np.random.Generator
@@ -262,6 +326,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--epsilon-schedule", type=str, default="logspace")
     p.add_argument("--powerlaw-exponent", type=float, default=1.25)
     p.add_argument("--q-type", type=str, default="uniform")
+    p.add_argument("--transition-mode", type=str, default="metastable")
+    p.add_argument("--rotation-angle", type=float, default=0.02)
+    p.add_argument("--spectral-retries", type=int, default=10)
     p.add_argument("--num-clusters", type=int, default=16)
     p.add_argument("--cluster-stickiness", type=float, default=0.92)
     p.add_argument("--emission-type", type=str, default="peaked")
@@ -283,6 +350,9 @@ def main() -> None:
         epsilon_schedule=args.epsilon_schedule,
         powerlaw_exponent=args.powerlaw_exponent,
         q_type=args.q_type,
+        transition_mode=args.transition_mode,
+        rotation_angle=args.rotation_angle,
+        spectral_retries=args.spectral_retries,
         num_clusters=args.num_clusters,
         cluster_stickiness=args.cluster_stickiness,
         emission_type=args.emission_type,
