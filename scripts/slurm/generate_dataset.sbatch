@@ -72,10 +72,6 @@ else
   OUTPUT_ROOT="${CFG_OUTPUT_ROOT}/${CFG_EXPERIMENT_NAME}/${CFG_VERSION}/datasets_grid"
 fi
 
-# Add job id namespace to prevent collisions across concurrent submissions.
-JOB_TAG=${SLURM_JOB_ID:-manual}
-OUTPUT_ROOT="${OUTPUT_ROOT}/job_${JOB_TAG}"
-
 TASK_ID=${SLURM_ARRAY_TASK_ID:-0}
 NUM_SIZES=${#DATASET_SIZES[@]}
 NUM_JOBS=${NUM_SIZES}
