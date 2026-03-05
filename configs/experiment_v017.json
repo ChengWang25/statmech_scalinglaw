@@ -13,7 +13,7 @@
     "q_type": "random",
     "num_clusters": 512,
     "emission_type": "peaked",
-    "eta": 0.15,
+    "eta": 0,
     "total_tokens": 8388608,
     "train_frac": 0.9,
     "val_frac": 0.05,
