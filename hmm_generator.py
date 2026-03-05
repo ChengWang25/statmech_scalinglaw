@@ -57,12 +57,34 @@ class PseudoCriticalHMM:
     def _build_epsilon(self, cfg: HMMConfig) -> NDArray[np.float64]:
         n = cfg.num_hidden
         if cfg.epsilon_schedule == "logspace":
-            eps = np.logspace(np.log10(cfg.epsilon_max), np.log10(cfg.epsilon_min), n)
+            # Use inverse-CDF quantiles for strict log-uniform density on
+            # [epsilon_min, epsilon_max], i.e. p(epsilon) \propto 1/epsilon.
+            emin = float(cfg.epsilon_min)
+            emax = float(cfg.epsilon_max)
+            if emin <= 0 or emax <= 0 or emin >= emax:
+                raise ValueError("For logspace schedule, require 0 < epsilon_min < epsilon_max")
+            u = (np.arange(n, dtype=np.float64) + 0.5) / n
+            eps = emin * np.power(emax / emin, u)
         elif cfg.epsilon_schedule == "powerlaw":
-            ranks = np.arange(1, n + 1, dtype=np.float64)
-            raw = ranks ** (-cfg.powerlaw_exponent)
-            raw = (raw - raw.min()) / (raw.max() - raw.min() + 1e-12)
-            eps = cfg.epsilon_min + (cfg.epsilon_max - cfg.epsilon_min) * raw
+            # Sample from a truncated power-law density:
+            #   p(epsilon) \propto epsilon^{-alpha}, epsilon in [emin, emax]
+            # using inverse-CDF sampling for reproducibility and strict density control.
+            alpha = float(cfg.powerlaw_exponent)
+            emin = float(cfg.epsilon_min)
+            emax = float(cfg.epsilon_max)
+            if emin <= 0 or emax <= 0 or emin >= emax:
+                raise ValueError("For powerlaw schedule, require 0 < epsilon_min < epsilon_max")
+
+            rng = np.random.default_rng(cfg.seed + 17)
+            u = rng.random(n, dtype=np.float64)
+
+            if np.isclose(alpha, 1.0):
+                eps = emin * np.power(emax / emin, u)
+            else:
+                one_minus_alpha = 1.0 - alpha
+                lo = np.power(emin, one_minus_alpha)
+                hi = np.power(emax, one_minus_alpha)
+                eps = np.power(lo + (hi - lo) * u, 1.0 / one_minus_alpha)
         elif cfg.epsilon_schedule == "custom":
             if cfg.epsilon_custom is None or len(cfg.epsilon_custom) != n:
                 raise ValueError("epsilon_custom must have length num_hidden")
