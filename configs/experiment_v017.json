@@ -4,12 +4,15 @@
   "version": "v017",
   "dataset": {
     "dataset_name": "dataset_main",
-    "num_hidden": 4096,
+    "num_hidden": 1024,
     "vocab_size": 256,
     "epsilon_min": 1e-4,
     "epsilon_max": 1,
     "epsilon_schedule": "powerlaw",
     "powerlaw_exponent": 2.0,
+    "transition_mode": "spectral",
+    "rotation_angle": 0,
+    "spectral_retries": 12,
     "q_type": "random",
     "num_clusters": 512,
     "emission_type": "peaked",
@@ -38,7 +41,7 @@
     "seed": 0
   },
   "sweep": {
-    "num_hidden_grid": "4096",
+    "num_hidden_grid": "1024",
     "epsilon_min_grid": "1e-6",
     "epsilon_max_grid": "1e-1",
     "epsilon_schedule_grid": "powerlaw",
