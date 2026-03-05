@@ -109,7 +109,7 @@ class PseudoCriticalHMM:
             raise ValueError(f"Unknown q_type={cfg.q_type}")
 
         row_sums = Q.sum(axis=1, keepdims=True)
-        Q = np.divide(Q, row_sums, where=row_sums > 0)
+        Q = np.divide(Q, row_sums, out=np.zeros_like(Q), where=row_sums > 0)
         return Q.astype(self.dtype)
 
     def _build_transition(
